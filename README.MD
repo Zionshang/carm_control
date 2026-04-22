@@ -58,3 +58,22 @@ robot.move_joint([j1, j2, j3, j4, j5, j6], is_sync=True)
 
 - `move_joint(joints, is_sync=True)`：点到点移动到目标关节位置。
 - `robot.joint_pos`：读取当前实际关节位置。
+
+## 键盘控制
+
+运行：
+
+```bash
+python examples/keyboard_control.py
+```
+
+按键：
+
+- `w/s`：TCP x 正/负方向
+- `a/d`：TCP y 正/负方向
+- `↑/↓`：TCP z 正/负方向
+- `u/o`：roll 正/负方向
+- `i/k`：pitch 正/负方向
+- `j/l`：yaw 正/负方向
+- `space`：回到 home 关节位姿
+- `esc`：退出程序
