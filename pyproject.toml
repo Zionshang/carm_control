@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "carm-control"
+version = "0.1.0"
+description = "TCP control helpers for Carm"
+readme = "README.MD"
+requires-python = ">=3.10"
+dependencies = [
+    "carm",
+    "pynput",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["controller*", "utils*"]
+exclude = ["examples*"]
