@@ -10,8 +10,8 @@ from utils.terminal_utils import TerminalInputGuard
 
 
 CONTROL_DT = 0.02
-POS_STEP = 0.001
-ROT_STEP = 0.005
+POS_STEP = 0.002
+ROT_STEP = 0.01
 HOME_JOINTS = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 
