@@ -11,9 +11,10 @@ requires-python = ">=3.10"
 dependencies = [
     "carm",
     "pynput",
+    "lcm",
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["controller*", "utils*"]
+include = ["carm_waypoint*", "controller*", "utils*"]
 exclude = ["examples*"]
