@@ -17,7 +17,8 @@ DEFAULT_WAYPOINT_FILE = "data/waypoints.json"
 OP_TRACK_TCP = "TRACK_TCP"
 OP_SAVE_CURRENT = "SAVE_CURRENT"
 OP_GOTO = "GOTO"
-OP_STOP = "STOP"
+OP_HOME = "HOME"
+HOME_JOINTS = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 
 class SupportsLcm(Protocol):
@@ -49,7 +50,7 @@ class LcmWaypointService:
         self._command_thread: threading.Thread | None = None
         self._subscription: Any = None
         self._state_lock = threading.Lock()
-        self._goto_thread: threading.Thread | None = None
+        self._motion_thread: threading.Thread | None = None
 
     @classmethod
     def from_robot_config(
@@ -82,9 +83,9 @@ class LcmWaypointService:
         self._stop_event.set()
         if self._command_thread is not None and self._command_thread.is_alive():
             self._command_thread.join(timeout=1.0)
-        goto_thread = self._goto_thread
-        if goto_thread is not None and goto_thread.is_alive():
-            goto_thread.join(timeout=1.0)
+        motion_thread = self._motion_thread
+        if motion_thread is not None and motion_thread.is_alive():
+            motion_thread.join(timeout=1.0)
 
         try:
             self.robot.disconnect()
@@ -122,14 +123,14 @@ class LcmWaypointService:
         if op == OP_GOTO:
             self._handle_goto(command)
             return
-        if op == OP_STOP:
-            self._handle_stop()
+        if op == OP_HOME:
+            self._handle_home()
             return
         print(f"Unsupported op: {command.op}")
 
     def _handle_track_tcp(self, command: WaypointCommand) -> None:
-        if self.is_goto_busy():
-            print("Robot is busy executing GOTO")
+        if self.is_motion_busy():
+            print("Robot is busy executing a joint motion")
             return
 
         tcp_cmd = list(command.tcp_cmd)
@@ -148,8 +149,8 @@ class LcmWaypointService:
             print(f"tcp_cmd execution failed: {exc}")
 
     def _handle_save_current(self, command: WaypointCommand) -> None:
-        if self.is_goto_busy():
-            print("Robot is busy executing GOTO")
+        if self.is_motion_busy():
+            print("Robot is busy executing a joint motion")
             return
         if not command.name:
             print("SAVE_CURRENT requires a waypoint name")
@@ -166,8 +167,8 @@ class LcmWaypointService:
         )
 
     def _handle_goto(self, command: WaypointCommand) -> None:
-        if self.is_goto_busy():
-            print("Robot is busy executing GOTO")
+        if self.is_motion_busy():
+            print("Robot is busy executing a joint motion")
             return
         if not command.name:
             print("GOTO requires a waypoint name")
@@ -178,29 +179,33 @@ class LcmWaypointService:
             print(f"Waypoint not found: {command.name}")
             return
 
-        self._goto_thread = threading.Thread(
-            target=self._run_goto,
-            args=(record.joint_pos,),
+        self._start_motion(record.joint_pos, motion_name="GOTO")
+
+    def _handle_home(self) -> None:
+        if self.is_motion_busy():
+            print("Robot is busy executing a joint motion")
+            return
+        self._start_motion(HOME_JOINTS, motion_name="HOME")
+
+    def _start_motion(self, joint_pos: list[float], *, motion_name: str) -> None:
+        self._motion_thread = threading.Thread(
+            target=self._run_motion,
+            args=(list(joint_pos), motion_name),
             daemon=True,
         )
-        self._goto_thread.start()
+        self._motion_thread.start()
 
-    def _run_goto(self, joint_pos: list[float]) -> None:
+    def _run_motion(self, joint_pos: list[float], motion_name: str) -> None:
         try:
             res = self.robot.move_joint(list(joint_pos), is_sync=True)
             if res.get("recv") != "Task_Recieve":
-                print(f"GOTO rejected: {res}")
+                print(f"{motion_name} rejected: {res}")
         except Exception as exc:
-            print(f"GOTO execution failed: {exc}")
+            print(f"{motion_name} execution failed: {exc}")
         finally:
             with self._state_lock:
-                self._goto_thread = None
+                self._motion_thread = None
 
-    def _handle_stop(self) -> None:
-        res = self.robot.stop_task(at_once=True)
-        if res.get("recv") != "Task_Recieve":
-            print(f"Stop rejected: {res}")
-
-    def is_goto_busy(self) -> bool:
+    def is_motion_busy(self) -> bool:
         with self._state_lock:
-            return self._goto_thread is not None and self._goto_thread.is_alive()
+            return self._motion_thread is not None and self._motion_thread.is_alive()

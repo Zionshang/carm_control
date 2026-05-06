@@ -5,7 +5,7 @@
 - `TRACK_TCP`：周期发送 TCP 目标位姿，机械臂连续跟踪。
 - `SAVE_CURRENT`：记录当前实际关节状态到指定名称。
 - `GOTO`：按名称运行到已保存的关节状态。
-- `STOP`：停止当前 `GOTO` 动作。
+- `HOME`：让机械臂回到 home 关节位姿 `[0, 0, 0, 0, 0, 0]`。
 
 ## 安装
 
@@ -27,7 +27,7 @@ LCM channel：
 
 字段说明：
 
-- `op`：操作类型，支持 `TRACK_TCP`、`SAVE_CURRENT`、`GOTO`、`STOP`
+- `op`：操作类型，支持 `TRACK_TCP`、`SAVE_CURRENT`、`GOTO`、`HOME`
 - `name`：位置名称，`SAVE_CURRENT` 和 `GOTO` 时使用
 - `tcp_cmd`：固定 6 维 TCP 位姿，格式为 `[x, y, z, roll, pitch, yaw]`，仅 `TRACK_TCP` 时使用
 
@@ -51,8 +51,8 @@ LCM channel：
   - `op = "GOTO"`
   - `name = "<位置名称>"`
   - `tcp_cmd = [0, 0, 0, 0, 0, 0]`
-- `STOP`
-  - `op = "STOP"`
+- `HOME`
+  - `op = "HOME"`
   - `name = ""`
   - `tcp_cmd = [0, 0, 0, 0, 0, 0]`
 
@@ -115,15 +115,15 @@ python examples/lcm_waypoint_server.py \
 
 这条命令会读取已保存的关节角，并执行 `move_joint()` 到该状态。
 
-### 4. 如需中断，发送 `STOP`
+### 4. 如需回到 home，发送 `HOME`
 
 示例：
 
-- `op = "STOP"`
+- `op = "HOME"`
 - `name = ""`
 - `tcp_cmd = [0, 0, 0, 0, 0, 0]`
 
-这条命令用于停止当前 `GOTO` 动作。
+这条命令会执行 `move_joint([0, 0, 0, 0, 0, 0])`，让机械臂回到 home 关节位姿。
 
 ## 位置文件说明
 

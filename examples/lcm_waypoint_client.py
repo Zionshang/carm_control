@@ -11,7 +11,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Send TCP or waypoint commands over LCM")
     parser.add_argument(
         "op",
-        choices=["TRACK_TCP", "SAVE_CURRENT", "GOTO", "STOP"],
+        choices=["TRACK_TCP", "SAVE_CURRENT", "GOTO", "HOME"],
         help="Command operation",
     )
     parser.add_argument("--name", default="", help="Waypoint name for SAVE_CURRENT/GOTO")
