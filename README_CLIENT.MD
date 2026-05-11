@@ -2,7 +2,7 @@
 
 这个项目对客户开放一个 LCM 命令接口。客户通过发送 `WaypointCommand` 控制机械臂，支持四类操作：
 
-- `TRACK_TCP`：周期发送 TCP 目标位姿，机械臂连续跟踪。
+- `TRACK_TCP`：周期发送 TCP 位姿增量，机械臂连续跟踪累加后的目标位姿。
 - `SAVE_CURRENT`：记录当前实际关节状态到指定名称。
 - `GOTO`：按名称运行到已保存的关节状态。
 - `HOME`：让机械臂回到 home 关节位姿 `[0, 0, 0, 0, 0, 0]`。
@@ -29,11 +29,16 @@ LCM channel：
 
 - `op`：操作类型，支持 `TRACK_TCP`、`SAVE_CURRENT`、`GOTO`、`HOME`
 - `name`：位置名称，`SAVE_CURRENT` 和 `GOTO` 时使用
-- `tcp_cmd`：固定 6 维 TCP 位姿，格式为 `[x, y, z, roll, pitch, yaw]`，仅 `TRACK_TCP` 时使用
+- `tcp_cmd`：固定 6 维 TCP 位姿增量，格式为 `[dx, dy, dz, droll, dpitch, dyaw]`，仅 `TRACK_TCP` 时使用
+  - 推荐单次增量：
+  - `dx/dy/dz`：米，例如 `0.001` 到 `0.003`
+  - `droll/dpitch/dyaw`：弧度，例如 `0.005` 到 `0.02`
 
 说明：
 
-- `tcp_cmd` 中角度单位是弧度。
+- `tcp_cmd` 中位置增量单位是米，角度增量单位是弧度。
+- 服务端第一次收到 `TRACK_TCP` 时，会以当前实际 TCP 位姿作为内部目标；之后每条 `TRACK_TCP` 都会把 `tcp_cmd` 累加到该内部目标，再调用 `track_tcp_pose()`。
+- 服务端会限制内部目标姿态：`roll/yaw ∈ [-pi, pi]`，`pitch ∈ [-pi/2, pi/2]`。
 - 当前接口是单向命令接口，不返回 LCM 状态消息。
 - 服务端收到非法命令时，只会在服务端日志打印错误。
 
@@ -42,7 +47,7 @@ LCM channel：
 - `TRACK_TCP`
   - `op = "TRACK_TCP"`
   - `name = ""`
-  - `tcp_cmd = [x, y, z, roll, pitch, yaw]`
+  - `tcp_cmd = [dx, dy, dz, droll, dpitch, dyaw]`
 - `SAVE_CURRENT`
   - `op = "SAVE_CURRENT"`
   - `name = "<位置名称>"`
@@ -81,15 +86,15 @@ python examples/lcm_waypoint_server.py \
 
 ### 1. 周期发送 `TRACK_TCP`
 
-客户端应周期性发送最新的 TCP 目标位姿，而不是只发送一次。
+客户端应周期性发送 TCP 位姿增量，而不是直接发送绝对 TCP 坐标。
 
 示例：
 
 - `op = "TRACK_TCP"`
 - `name = ""`
-- `tcp_cmd = [0.32, 0.01, 0.35, 0.0, 1.57, 0.0]`
+- `tcp_cmd = [0.002, 0.0, 0.0, 0.0, 0.0, 0.0]`
 
-服务端收到后会调用 `track_tcp_pose()`，让机械臂末端持续跟踪该目标。
+服务端收到后会把这条增量累加到内部 TCP 目标位姿，然后调用 `track_tcp_pose()`，让机械臂末端持续跟踪累加后的目标。
 
 ### 2. 到位后发送 `SAVE_CURRENT`
 

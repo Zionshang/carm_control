@@ -3,5 +3,5 @@ package carm_waypoint;
 struct WaypointCommand {
     string op;              // 操作类型：TRACK_TCP / SAVE_CURRENT / GOTO / HOME
     string name;            // waypoint 名称，SAVE_CURRENT / GOTO 时使用
-    double tcp_cmd[6];      // 目标 TCP 位姿 [x, y, z, roll, pitch, yaw]
+    double tcp_cmd[6];      // TCP 位姿增量 [dx, dy, dz, droll, dpitch, dyaw]
 }

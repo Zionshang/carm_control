@@ -16,11 +16,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--name", default="", help="Waypoint name for SAVE_CURRENT/GOTO")
     parser.add_argument(
-        "--tcp-cmd",
+        "--tcp-delta",
         nargs=6,
         type=float,
-        metavar=("X", "Y", "Z", "ROLL", "PITCH", "YAW"),
-        help="Target TCP pose [x, y, z, roll, pitch, yaw] for TRACK_TCP",
+        metavar=("DX", "DY", "DZ", "DROLL", "DPITCH", "DYAW"),
+        help="TCP pose delta [dx, dy, dz, droll, dpitch, dyaw] for TRACK_TCP",
     )
     parser.add_argument("--lcm-url", default=DEFAULT_LCM_URL, help="LCM URL")
     return parser.parse_args()
@@ -30,13 +30,13 @@ def main() -> None:
     args = parse_args()
     lcm_client = lcm.LCM(args.lcm_url)
 
-    if args.op == "TRACK_TCP" and args.tcp_cmd is None:
-        raise SystemExit("--tcp-cmd is required for TRACK_TCP")
+    if args.op == "TRACK_TCP" and args.tcp_delta is None:
+        raise SystemExit("--tcp-delta is required for TRACK_TCP")
 
     command = WaypointCommand()
     command.op = args.op
     command.name = args.name
-    command.tcp_cmd = list(args.tcp_cmd or [])
+    command.tcp_cmd = list(args.tcp_delta or [])
     lcm_client.publish(COMMAND_CHANNEL, command.encode())
 
 

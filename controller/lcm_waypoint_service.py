@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import queue
 import threading
 from typing import Any, Protocol
@@ -19,6 +20,17 @@ OP_SAVE_CURRENT = "SAVE_CURRENT"
 OP_GOTO = "GOTO"
 OP_HOME = "HOME"
 HOME_JOINTS = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+TCP_COMMAND_DIM = 6
+
+
+def clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def clamp_tcp_target(target: list[float]) -> None:
+    target[3] = clamp(target[3], -math.pi, math.pi)
+    target[4] = clamp(target[4], -math.pi / 2, math.pi / 2)
+    target[5] = clamp(target[5], -math.pi, math.pi)
 
 
 class SupportsLcm(Protocol):
@@ -51,6 +63,7 @@ class LcmWaypointService:
         self._subscription: Any = None
         self._state_lock = threading.Lock()
         self._motion_thread: threading.Thread | None = None
+        self._tcp_target: list[float] | None = None
 
     @classmethod
     def from_robot_config(
@@ -133,20 +146,41 @@ class LcmWaypointService:
             print("Robot is busy executing a joint motion")
             return
 
-        tcp_cmd = list(command.tcp_cmd)
-        if len(tcp_cmd) != 6:
-            print(f"Invalid tcp_cmd length: expected 6, got {len(tcp_cmd)}")
+        tcp_delta = list(command.tcp_cmd)
+        if len(tcp_delta) != TCP_COMMAND_DIM:
+            print(f"Invalid tcp_cmd length: expected {TCP_COMMAND_DIM}, got {len(tcp_delta)}")
             return
 
         try:
-            res = self.robot.track_tcp_pose(tcp_cmd)
+            tcp_target = self._apply_tcp_delta(tcp_delta)
+            res = self.robot.track_tcp_pose(tcp_target)
             if res is False:
-                print("tcp_cmd rejected")
+                print("tcp delta command rejected")
                 return
             if isinstance(res, dict) and res.get("recv") == "Task_Refuse":
-                print(f"tcp_cmd rejected: {res}")
+                print(f"tcp delta command rejected: {res}")
         except Exception as exc:
-            print(f"tcp_cmd execution failed: {exc}")
+            print(f"tcp delta command execution failed: {exc}")
+
+    def _apply_tcp_delta(self, tcp_delta: list[float]) -> list[float]:
+        with self._state_lock:
+            tcp_target = list(self._tcp_target) if self._tcp_target is not None else None
+
+        if tcp_target is None:
+            tcp_target = self.robot.get_tcp_pose()
+            if len(tcp_target) != TCP_COMMAND_DIM:
+                raise RuntimeError("Current TCP pose is unavailable or invalid")
+
+        tcp_target = [
+            target_value + delta_value
+            for target_value, delta_value in zip(tcp_target, tcp_delta, strict=True)
+        ]
+        clamp_tcp_target(tcp_target)
+
+        with self._state_lock:
+            self._tcp_target = list(tcp_target)
+
+        return tcp_target
 
     def _handle_save_current(self, command: WaypointCommand) -> None:
         if self.is_motion_busy():
@@ -203,9 +237,24 @@ class LcmWaypointService:
         except Exception as exc:
             print(f"{motion_name} execution failed: {exc}")
         finally:
+            self._sync_tcp_target_from_robot(motion_name)
             with self._state_lock:
                 self._motion_thread = None
 
     def is_motion_busy(self) -> bool:
         with self._state_lock:
             return self._motion_thread is not None and self._motion_thread.is_alive()
+
+    def _sync_tcp_target_from_robot(self, motion_name: str) -> None:
+        try:
+            tcp_target = self.robot.get_tcp_pose()
+            if len(tcp_target) != TCP_COMMAND_DIM:
+                print(f"{motion_name} TCP target sync failed: invalid TCP pose")
+                return
+        except Exception as exc:
+            print(f"{motion_name} TCP target sync failed: {exc}")
+            return
+
+        clamp_tcp_target(tcp_target)
+        with self._state_lock:
+            self._tcp_target = list(tcp_target)
