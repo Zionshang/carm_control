@@ -11,10 +11,6 @@ from carm_waypoint import WaypointCommand
 from controller.tcp_carm import TcpCarm
 from controller.waypoint_store import WaypointStore
 
-DEFAULT_LCM_URL = "udpm://239.255.76.67:7667?ttl=1"
-COMMAND_CHANNEL = "tcp_cmd"
-DEFAULT_WAYPOINT_FILE = "data/waypoints.json"
-
 OP_TRACK_TCP = "TRACK_TCP"
 OP_SAVE_CURRENT = "SAVE_CURRENT"
 OP_GOTO = "GOTO"
@@ -48,7 +44,7 @@ class LcmWaypointService:
         store: WaypointStore,
         lcm_client: SupportsLcm,
         *,
-        cmd_channel: str = COMMAND_CHANNEL,
+        cmd_channel: str = "tcp_cmd",
         handle_timeout_ms: int = 100,
     ) -> None:
         self.robot = robot
@@ -70,12 +66,18 @@ class LcmWaypointService:
         cls,
         *,
         addr: str = "10.42.0.101",
-        lcm_url: str = DEFAULT_LCM_URL,
-        waypoint_file: str = DEFAULT_WAYPOINT_FILE,
+        lcm_url: str = "udpm://239.255.76.67:7667?ttl=1",
+        waypoint_file: str = "data/waypoints.json",
+        cmd_channel: str = "tcp_cmd",
     ) -> "LcmWaypointService":
         robot = TcpCarm(addr=addr)
         store = WaypointStore(waypoint_file)
-        return cls(robot=robot, store=store, lcm_client=lcm.LCM(lcm_url))
+        return cls(
+            robot=robot,
+            store=store,
+            lcm_client=lcm.LCM(lcm_url),
+            cmd_channel=cmd_channel,
+        )
 
     def serve_forever(self) -> None:
         self.store.load()

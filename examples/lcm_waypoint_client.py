@@ -4,7 +4,7 @@ import argparse
 import lcm
 from carm_waypoint import WaypointCommand
 
-from controller.lcm_waypoint_service import COMMAND_CHANNEL, DEFAULT_LCM_URL
+from controller.lcm_waypoint_service import COMMAND_CHANNEL, "udpm://239.255.76.67:7667?ttl=1"
 
 
 def parse_args() -> argparse.Namespace:
@@ -22,7 +22,7 @@ def parse_args() -> argparse.Namespace:
         metavar=("DX", "DY", "DZ", "DROLL", "DPITCH", "DYAW"),
         help="TCP pose delta [dx, dy, dz, droll, dpitch, dyaw] for TRACK_TCP",
     )
-    parser.add_argument("--lcm-url", default=DEFAULT_LCM_URL, help="LCM URL")
+    parser.add_argument("--lcm-url", default="udpm://239.255.76.67:7667?ttl=1", help="LCM URL")
     return parser.parse_args()
 
 
