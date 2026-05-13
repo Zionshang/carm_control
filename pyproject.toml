@@ -7,7 +7,7 @@ name = "carm-control"
 version = "0.1.0"
 description = "TCP control helpers for Carm"
 readme = "README.MD"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 dependencies = [
     "carm",
     "pynput",
