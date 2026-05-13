@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import queue
 import threading
-from typing import Any, Protocol
+from typing import Any, List, Optional, Protocol
 
 import lcm
 from carm_waypoint import WaypointCommand
@@ -23,7 +23,7 @@ def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
-def clamp_tcp_target(target: list[float]) -> None:
+def clamp_tcp_target(target: List[float]) -> None:
     target[3] = clamp(target[3], -math.pi, math.pi)
     target[4] = clamp(target[4], -math.pi / 2, math.pi / 2)
     target[5] = clamp(target[5], -math.pi, math.pi)
@@ -55,11 +55,11 @@ class LcmWaypointService:
 
         self._command_queue: queue.Queue[WaypointCommand] = queue.Queue()
         self._stop_event = threading.Event()
-        self._command_thread: threading.Thread | None = None
+        self._command_thread: Optional[threading.Thread] = None
         self._subscription: Any = None
         self._state_lock = threading.Lock()
-        self._motion_thread: threading.Thread | None = None
-        self._tcp_target: list[float] | None = None
+        self._motion_thread: Optional[threading.Thread] = None
+        self._tcp_target: Optional[List[float]] = None
 
     @classmethod
     def from_robot_config(
@@ -164,7 +164,7 @@ class LcmWaypointService:
         except Exception as exc:
             print(f"tcp delta command execution failed: {exc}")
 
-    def _apply_tcp_delta(self, tcp_delta: list[float]) -> list[float]:
+    def _apply_tcp_delta(self, tcp_delta: List[float]) -> List[float]:
         with self._state_lock:
             tcp_target = list(self._tcp_target) if self._tcp_target is not None else None
 
@@ -175,7 +175,7 @@ class LcmWaypointService:
 
         tcp_target = [
             target_value + delta_value
-            for target_value, delta_value in zip(tcp_target, tcp_delta, strict=True)
+            for target_value, delta_value in zip(tcp_target, tcp_delta)
         ]
         clamp_tcp_target(tcp_target)
 
@@ -223,7 +223,7 @@ class LcmWaypointService:
             return
         self._start_motion(HOME_JOINTS, motion_name="HOME")
 
-    def _start_motion(self, joint_pos: list[float], *, motion_name: str) -> None:
+    def _start_motion(self, joint_pos: List[float], *, motion_name: str) -> None:
         self._motion_thread = threading.Thread(
             target=self._run_motion,
             args=(list(joint_pos), motion_name),
@@ -231,7 +231,7 @@ class LcmWaypointService:
         )
         self._motion_thread.start()
 
-    def _run_motion(self, joint_pos: list[float], motion_name: str) -> None:
+    def _run_motion(self, joint_pos: List[float], motion_name: str) -> None:
         try:
             res = self.robot.move_joint(list(joint_pos), is_sync=True)
             if res.get("recv") != "Task_Recieve":

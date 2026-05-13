@@ -6,21 +6,21 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import RLock
-from typing import Any
+from typing import Any, Dict, List, Optional, Union
 
 
 @dataclass(frozen=True)
 class WaypointRecord:
     name: str
-    joint_pos: list[float]
+    joint_pos: List[float]
     saved_at: str
 
 
 class WaypointStore:
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: Union[str, Path]) -> None:
         self.path = Path(path)
         self._lock = RLock()
-        self._records: dict[str, dict[str, Any]] = {}
+        self._records: Dict[str, Dict[str, Any]] = {}
 
     def load(self) -> None:
         with self._lock:
@@ -34,12 +34,12 @@ class WaypointStore:
             if not isinstance(raw, dict):
                 raise ValueError("waypoint file must contain a JSON object")
 
-            records: dict[str, dict[str, Any]] = {}
+            records: Dict[str, Dict[str, Any]] = {}
             for name, value in raw.items():
                 records[name] = self._validate_record(name, value)
             self._records = records
 
-    def get(self, name: str) -> WaypointRecord | None:
+    def get(self, name: str) -> Optional[WaypointRecord]:
         with self._lock:
             record = self._records.get(name)
             if record is None:
@@ -49,7 +49,7 @@ class WaypointStore:
     def save(
         self,
         name: str,
-        joint_pos: list[float],
+        joint_pos: List[float],
     ) -> WaypointRecord:
         if not name:
             raise ValueError("name must not be empty")
@@ -72,14 +72,14 @@ class WaypointStore:
             encoding="utf-8",
         )
 
-    def _to_record(self, name: str, record: dict[str, Any]) -> WaypointRecord:
+    def _to_record(self, name: str, record: Dict[str, Any]) -> WaypointRecord:
         return WaypointRecord(
             name=name,
             joint_pos=list(record["joint_pos"]),
             saved_at=str(record["saved_at"]),
         )
 
-    def _validate_record(self, name: str, value: Any) -> dict[str, Any]:
+    def _validate_record(self, name: str, value: Any) -> Dict[str, Any]:
         if not isinstance(value, dict):
             raise ValueError(f"waypoint {name!r} must be an object")
         return {
@@ -88,7 +88,7 @@ class WaypointStore:
         }
 
     @staticmethod
-    def _validate_vector(field: str, value: Any, length: int) -> list[float]:
+    def _validate_vector(field: str, value: Any, length: int) -> List[float]:
         if not isinstance(value, list) or len(value) != length:
             raise ValueError(f"{field} must be a list of length {length}")
         return [float(item) for item in value]

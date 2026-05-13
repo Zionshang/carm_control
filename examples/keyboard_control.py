@@ -3,7 +3,7 @@ import math
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from controller.tcp_carm import DEFAULT_TCP_OFFSET, TcpCarm
 from utils.terminal_utils import TerminalInputGuard
@@ -23,8 +23,8 @@ def clamp(value: float, low: float, high: float) -> float:
 class KeyboardInput:
     keyboard: Any
     stop_event: threading.Event = field(default_factory=threading.Event)
-    keys: dict[object, bool] = field(default_factory=dict)
-    listener: Any | None = None
+    keys: Dict[object, bool] = field(default_factory=dict)
+    listener: Optional[Any] = None
 
     def __post_init__(self) -> None:
         key = self.keyboard.Key
@@ -52,7 +52,7 @@ class KeyboardInput:
             return self.char_key(key.char.lower())
         return key
 
-    def on_press(self, key: object) -> bool | None:
+    def on_press(self, key: object) -> Optional[bool]:
         key = self.norm_key(key)
         if key == self.keyboard.Key.esc:
             self.request_stop()
@@ -94,13 +94,13 @@ class KeyboardInput:
             self.listener = None
 
 
-def clamp_target(target: list[float]) -> None:
+def clamp_target(target: List[float]) -> None:
     target[3] = clamp(target[3], -math.pi, math.pi)
     target[4] = clamp(target[4], -math.pi / 2, math.pi / 2)
     target[5] = clamp(target[5], -math.pi, math.pi)
 
 
-def update_target(target: list[float], keyboard_input: KeyboardInput) -> None:
+def update_target(target: List[float], keyboard_input: KeyboardInput) -> None:
     axis = keyboard_input.axis
     key = keyboard_input.keyboard.Key
     char_key = keyboard_input.char_key
@@ -114,7 +114,7 @@ def update_target(target: list[float], keyboard_input: KeyboardInput) -> None:
     clamp_target(target)
 
 
-def reset_to_home(robot: TcpCarm, keyboard_input: KeyboardInput) -> list[float]:
+def reset_to_home(robot: TcpCarm, keyboard_input: KeyboardInput) -> List[float]:
     robot.move_joint(HOME_JOINTS, is_sync=True)
     time.sleep(0.5)  # 等待机械臂稳定
     keyboard_input.keys[keyboard_input.keyboard.Key.space] = False

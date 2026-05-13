@@ -1,5 +1,5 @@
 import math
-from typing import Any, Sequence
+from typing import Any, Dict, List, Sequence, Union
 
 from carm import Carm
 
@@ -24,8 +24,8 @@ class TcpCarm(Carm):
     旋转组合顺序为 ZYX: Rz(yaw) * Ry(pitch) * Rx(roll)。
     """
 
-    _tcp_offset_pos: list[float]
-    _tcp_offset_quat: list[float]
+    _tcp_offset_pos: List[float]
+    _tcp_offset_quat: List[float]
 
     def __init__(
         self,
@@ -58,7 +58,7 @@ class TcpCarm(Carm):
         self,
         tcp_pose: Sequence[float],
         is_sync: bool = True,
-    ) -> dict:
+    ) -> Dict[str, Any]:
         """
         移动 TCP 到目标 6 维姿态。
 
@@ -71,7 +71,7 @@ class TcpCarm(Carm):
     def track_tcp_pose(
         self,
         tcp_pose: Sequence[float],
-    ) -> dict | bool:
+    ) -> Union[Dict[str, Any], bool]:
         """
         周期跟踪 TCP 的 6 维目标姿态。
 
@@ -81,7 +81,7 @@ class TcpCarm(Carm):
         flange_pose = self.tcp_pose_to_flange_pose(tcp_pose)
         return self.track_pose(flange_pose)
 
-    def tcp_pose_to_flange_pose(self, tcp_pose: Sequence[float]) -> list[float]:
+    def tcp_pose_to_flange_pose(self, tcp_pose: Sequence[float]) -> List[float]:
         """
         将 TCP 的 6 维目标姿态转换为 flange 的 7 维目标姿态。
 
@@ -104,7 +104,7 @@ class TcpCarm(Carm):
         flange_quat = quat_norm(quat_mul(q_tcp, self._tcp_offset_quat))
         return [*flange_pos, *flange_quat]
 
-    def flange_pose_to_tcp_pose(self, flange_pose: Sequence[float]) -> list[float]:
+    def flange_pose_to_tcp_pose(self, flange_pose: Sequence[float]) -> List[float]:
         """
         将 flange 的 7 维姿态转换为 TCP 的 6 维姿态。
 
@@ -127,7 +127,7 @@ class TcpCarm(Carm):
         ]
         return [*tcp_pos, *quat_to_euler_zyx(q_tcp)]
 
-    def get_tcp_pose(self) -> list[float]:
+    def get_tcp_pose(self) -> List[float]:
         """
         获取当前 TCP 的 6 维实际姿态。
 

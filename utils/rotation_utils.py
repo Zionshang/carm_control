@@ -1,8 +1,8 @@
 import math
-from typing import Sequence
+from typing import List, Sequence
 
 
-def quat_norm(q: Sequence[float]) -> list[float]:
+def quat_norm(q: Sequence[float]) -> List[float]:
     if len(q) != 4:
         raise ValueError("quaternion must be length 4")
 
@@ -12,7 +12,7 @@ def quat_norm(q: Sequence[float]) -> list[float]:
     return [v / n for v in q]
 
 
-def quat_mul(q1: Sequence[float], q2: Sequence[float]) -> list[float]:
+def quat_mul(q1: Sequence[float], q2: Sequence[float]) -> List[float]:
     if len(q1) != 4 or len(q2) != 4:
         raise ValueError("quaternion must be length 4")
 
@@ -27,7 +27,7 @@ def quat_mul(q1: Sequence[float], q2: Sequence[float]) -> list[float]:
     ]
 
 
-def euler_zyx_to_quat(euler_rpy: Sequence[float]) -> list[float]:
+def euler_zyx_to_quat(euler_rpy: Sequence[float]) -> List[float]:
     """
     将 ZYX 欧拉角转换为 xyzw 四元数。
 
@@ -52,7 +52,7 @@ def euler_zyx_to_quat(euler_rpy: Sequence[float]) -> list[float]:
     return quat_norm(quat_mul(quat_mul(qz, qy), qx))
 
 
-def quat_to_euler_zyx(q: Sequence[float]) -> list[float]:
+def quat_to_euler_zyx(q: Sequence[float]) -> List[float]:
     """
     将 xyzw 四元数转换为 ZYX 欧拉角。
 
@@ -75,12 +75,12 @@ def quat_to_euler_zyx(q: Sequence[float]) -> list[float]:
     return [roll, pitch, yaw]
 
 
-def quat_conjugate(q: Sequence[float]) -> list[float]:
+def quat_conjugate(q: Sequence[float]) -> List[float]:
     x, y, z, w = quat_norm(q)
     return [-x, -y, -z, w]
 
 
-def quat_rotate_vector(q: Sequence[float], v: Sequence[float]) -> list[float]:
+def quat_rotate_vector(q: Sequence[float], v: Sequence[float]) -> List[float]:
     if len(v) != 3:
         raise ValueError("vector must be length 3")
 

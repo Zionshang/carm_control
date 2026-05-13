@@ -1,13 +1,13 @@
 import sys
 import termios
 import tty
-from typing import Any
+from typing import Any, List, Optional
 
 
 class TerminalInputGuard:
     def __init__(self) -> None:
-        self.fd: int | None = None
-        self.attrs: list[Any] | None = None
+        self.fd: Optional[int] = None
+        self.attrs: Optional[List[Any]] = None
 
     def __enter__(self) -> "TerminalInputGuard":
         if not sys.stdin.isatty():
